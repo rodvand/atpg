@@ -1,9 +1,4 @@
 #!/usr/bin/env python
-'''
-    <ATPG for Stanford>
-
-@author: James Hongyi Zeng
-'''
 from utils.load_stanford_backbone import *
 from headerspace.applications import *
 from headerspace.hs import *
