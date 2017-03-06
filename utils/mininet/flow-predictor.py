@@ -66,8 +66,11 @@ def dump_flows(switch):
 				new = line.split("=")
 				if len(new) == 2:
 					entry[new[0].strip(",")] = new[1].strip(",")
+			entries.append(entry)
+	if len(entries) == 0:
+		return None	
 
-
+	return entries
 		
 		
 	
