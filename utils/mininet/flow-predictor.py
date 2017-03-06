@@ -46,9 +46,29 @@ def dump_flows(switch):
 	proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
 	flows = proc.stdout.read()
 	flow = flows.split("\n")
-
+	entries = []
 	for line in flow:
-		print(line)
+		if 'NXST' in line:
+			continue
+
+		entry = {}
+		att = line.split(" ")
+
+		if len(att) > 1:
+			att.pop(0) # Remove first element (it's just an empty space)
+			el = att[-2].split(",")
+			att.pop(len(att) - 2)
+
+			for e in el:
+				att.append(e)
+			
+			for line in att:
+				new = line.split("=")
+				if len(new) == 2:
+					entry[new[0].strip(",")] = new[1].strip(",")
+
+
+		
 		
 	
 
