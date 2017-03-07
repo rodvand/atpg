@@ -55,6 +55,7 @@ def dump_flows(switch):
 
 		entry = {}
 		att = line.split(" ")
+                entry['switch'] = switch
 
 		if len(att) > 1:
 			att.pop(0) # Remove first element (it's just an empty space)
@@ -74,13 +75,60 @@ def dump_flows(switch):
 
 	return entries
 		
-def match_rules(flows):
+def match_rules(flows, match_conditions):
 	'''
 	Input: a dictionary of flows
 	Output: rules matched, first match listed first (list). If no rule matched, return None
 	'''
-		
+	import ipaddress
+	source = ipaddress.IPv4Address(unicode(match_conditions[0][0]))
+	dest = ipaddress.IPv4Address(unicode(match_conditions[1][0]))
+
+        if flows is None:
+            return None
+
+	matches = []
 	
+	for flow in flows:
+		source_match = True
+		dest_match = True
+		if 'nw_src' in flow:
+			dest_match = ipaddress.ip_address(source) in ipaddress.ip_network(unicode(flow['nw_src']))
+		if 'nw_dst' in flow:
+			dest_match = ipaddress.ip_address(dest) in ipaddress.ip_network(unicode(flow['nw_dst']))
+		
+		if source_match and dest_match:
+			matches.append(flow)
+	
+	return matches
+
+def print_flows(flows):
+    '''
+    Function to prettify the print of a flow.
+    Input: flows
+    Output: prints the flows in a readable manner
+    '''
+    for flow in flows:
+        if 'nw_dst' in flow and 'nw_src' in flow:
+            print("Switch: " + flow['switch']
+                    + " Priority: " + flow['priority'] 
+                    + " Source: " + flow['nw_src'] 
+                    + " Destination: " + flow['nw_dst'] 
+                    + " Action: " + flow['actions'])
+        elif 'nw_dst' in flow and 'nw_src' not in flow:
+            print("Switch: " + flow['switch']
+                    + " Priority: " + flow['priority'] 
+                    + " Destination: " + flow['nw_dst'] 
+                    + " Action: " + flow['actions'])
+        elif 'nw_src' in flow and 'nw_dst' not in flow:
+            print("Switch: " + flow['switch']
+                    + " Priority: " + flow['priority'] 
+                    + " Source: " + flow['nw_src'] 
+                    + " Action: " + flow['actions'])
+        else:
+            print("Switch: " + flow['switch']
+                    + " Priority: " + flow['priority'] 
+                    + " Action: " + flow['actions'])
 
 def main():
 	'''
@@ -103,15 +151,19 @@ def main():
 	args = parser.parse_args()
 	source = args.s
 	dest = args.d
+        print(args)
 	if args.S == None:
-		switches = get_interfaces()
+		switches = get_interfaces(sort=True)
 	else:
 		switches = args.S
-
+	
+	condition = (source, dest)
+	
 	for switch in switches:
-		print("Flows for switch: " + switch)
-		dump_flows(switch.strip())	
-
+		flow = dump_flows(switch.strip())	
+		matches = match_rules(flow, condition)
+                if matches is not None:
+                    print_flows(matches)
 
 if __name__=="__main__":
 	main()
