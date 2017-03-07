@@ -22,6 +22,8 @@ def get_interfaces(sort=False):
 			continue
 		elif 'ovs' in interface:
 			continue
+		elif 'eth' in interface:
+			continue
 		
 		split_int = interface.split("-")
 		switch = split_int[0]
@@ -72,12 +74,44 @@ def dump_flows(switch):
 
 	return entries
 		
+def match_rules(flows):
+	'''
+	Input: a dictionary of flows
+	Output: rules matched, first match listed first (list). If no rule matched, return None
+	'''
 		
 	
 
 def main():
-	print(get_interfaces(sort=True))
-	dump_flows("s1")
+	'''
+	Script to predict the flow of a packet through the switches.
+	Input:
+		switches
+		source
+		destination
+		port		
+	First start: just show rules matching, don't think about the interconnections
+	'''
+	import argparse
+	
+	# Commandline arguments
+	parser = argparse.ArgumentParser(description='Predict the packet flow through the network')
+	parser.add_argument('-S', nargs='+', help='the switches to check the packet flow through', metavar='SWI,SWI')
+	parser.add_argument('-s', nargs=1, help='the source address', metavar='SRC')
+	parser.add_argument('-d', nargs=1, help='the destination address', metavar='DST')
+
+	args = parser.parse_args()
+	source = args.s
+	dest = args.d
+	if args.S == None:
+		switches = get_interfaces()
+	else:
+		switches = args.S
+
+	for switch in switches:
+		print("Flows for switch: " + switch)
+		dump_flows(switch.strip())	
+
 
 if __name__=="__main__":
 	main()
