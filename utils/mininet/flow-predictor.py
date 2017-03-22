@@ -8,6 +8,39 @@ Takes for input:
 	- Optional: specific switches
 '''
 
+class Device(object):
+    '''
+    A class to represent a Device (host/switch) in the network
+    '''
+    
+    def __init__(self, name):
+        self.connections = {}
+        self.name = name
+
+    def add_connection(self, port, device):
+        connections = self.connections
+        connections[port] = device
+    
+    def list_connections(self):
+        connections = self.connections
+        if len(connections) > 0:
+            for p in connections:
+                print(self.name + " is connected to " + p + " on port " + connections[p])
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def get_connection(self):
+        '''
+        If device only have one connection, return it 
+        '''
+        conn = self.connections
+
+        if len(conn) == 1:
+            return conn 
+
+        return False
+
 def get_interfaces(sort=False):
 	'''
 	Get the interfaces on the host. 
@@ -81,8 +114,10 @@ def match_rules(flows, match_conditions):
 	Output: rules matched, first match listed first (list). If no rule matched, return None
 	'''
 	import ipaddress
-	source = ipaddress.IPv4Address(unicode(match_conditions[0][0]))
-	dest = ipaddress.IPv4Address(unicode(match_conditions[1][0]))
+        if match_conditions[0]:
+	    source = ipaddress.IPv4Address(unicode(match_conditions[0][0]))
+        if match_conditions[1]:
+	    dest = ipaddress.IPv4Address(unicode(match_conditions[1][0]))
 
         if flows is None:
             return None
@@ -130,6 +165,76 @@ def print_flows(flows):
                     + " Priority: " + flow['priority'] 
                     + " Action: " + flow['actions'])
 
+def get_port(string):
+    local = string[0].split('-')
+    external = string[1].split('-')
+    device = external[0]
+    port = local[1]
+
+    return (device, port)
+
+def get_device(dev, search):
+    '''
+    Return Device object after searching for device
+    '''
+
+    for device in dev:
+        if search in device.name:
+            return device 
+    return None
+
+def create_topology(conn, f='topology.txt'):
+    '''
+    Definition to create a topology of the network.
+    '''
+    o = open(f, 'r')
+    topology = []
+
+    for line in o:
+        new_line = line.split()
+
+        # Loop through the list 
+        count = 0
+        for entry in new_line:
+            if count == 0:
+                device = Device(entry)
+
+            count = count + 1
+            sp = entry.split(':')
+
+            if len(sp) == 1:
+                continue
+            elif not sp[1]:
+                continue
+            port, ext = get_port(sp)
+
+            device.add_connection(port, ext)
+            topology.append(device)
+
+    return topology
+
+def predict_path(topo, start, props):
+    '''
+    Predict the path between start and end by analysing the 
+    flow tables on the switches and create a path.
+
+    Returns list with path
+    '''
+
+    start_device = get_device(topo, start) 
+    first_hop = start_device.get_connection()
+
+    if first_hop:
+        for s in first_hop:
+            dev = get_device(topo, s)
+            flow = dump_flows(dev.name)
+            matches = match_rules(flow, props)
+
+    print(matches)
+
+
+
+
 def main():
 	'''
 	Script to predict the flow of a packet through the switches.
@@ -156,8 +261,11 @@ def main():
 		switches = get_interfaces(sort=True)
 	else:
 		switches = args.S
+        topology_database = {}
+        topo = create_topology(topology_database)
 	
 	condition = (source, dest)
+        predict_path(topo, 'h197', condition)
 	
 	for switch in switches:
 		flow = dump_flows(switch.strip())	
@@ -167,3 +275,4 @@ def main():
 
 if __name__=="__main__":
 	main()
+
